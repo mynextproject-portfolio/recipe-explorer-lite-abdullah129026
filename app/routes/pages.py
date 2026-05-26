@@ -10,12 +10,20 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/", response_class=HTMLResponse)
-def home(request: Request, search: Optional[str] = None, message: Optional[str] = None):
-    """Home page with recipe list and search"""
+def home(request: Request, search: Optional[str] = None, cuisine: Optional[str] = None, message: Optional[str] = None):
+    """Home page with recipe list, search, and cuisine filter"""
+    all_recipes = recipe_storage.get_all_recipes()
+    
+    # Get unique cuisines
+    cuisines = sorted(set(r.cuisine for r in all_recipes if r.cuisine))
+    
+    # Filter recipes
     if search:
         recipes = recipe_storage.search_recipes(search)
+    elif cuisine:
+        recipes = [r for r in all_recipes if r.cuisine == cuisine]
     else:
-        recipes = recipe_storage.get_all_recipes()
+        recipes = all_recipes
     
     return templates.TemplateResponse(
         request,
@@ -23,6 +31,8 @@ def home(request: Request, search: Optional[str] = None, message: Optional[str] 
         {
             "recipes": recipes,
             "search_query": search or "",
+            "selected_cuisine": cuisine or "",
+            "cuisines": cuisines,
             "message": message
         }
     )
@@ -80,6 +90,7 @@ def create_recipe_form(
     request: Request,
     title: str = Form(...),
     description: str = Form(...),
+    cuisine: str = Form(...),
     difficulty: str = Form(...),
     ingredients: str = Form(...),
     instructions: str = Form(...),
@@ -105,6 +116,7 @@ def create_recipe_form(
         recipe_data = RecipeCreate(
             title=title,
             description=description,
+            cuisine=cuisine,
             difficulty=difficulty,
             ingredients=ingredient_list,
             instructions=instructions.strip(),
@@ -129,6 +141,7 @@ def update_recipe_form(
     recipe_id: str,
     title: str = Form(...),
     description: str = Form(...),
+    cuisine: str = Form(...),
     difficulty: str = Form(...),
     ingredients: str = Form(...),
     instructions: str = Form(...),
@@ -153,6 +166,7 @@ def update_recipe_form(
         recipe_data = RecipeUpdate(
             title=title,
             description=description,
+            cuisine=cuisine,
             difficulty=difficulty,
             ingredients=ingredient_list,
             instructions=instructions.strip(),
